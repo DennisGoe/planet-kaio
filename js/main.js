@@ -594,14 +594,17 @@ const clamp01 = (x) => THREE.MathUtils.clamp(x, 0, 1);
 function computeSickTarget() {
   const vh = window.innerHeight;
 
-  // Kapitel: jede Klima-Zahl schiebt den Schaden eine Stufe weiter
+  // Kapitel: jede Klima-Zahl schiebt den Schaden eine Stufe weiter.
+  // Ein Kapitel zählt erst, wenn es wirklich erreicht ist (p > 0) — sein
+  // Ruhewert ist die Vorgänger-Stufe, und die würde den Planeten sonst
+  // schon am Seitenanfang krank machen.
   let damage = 0;
   statEls.forEach((el, i) => {
     const r = el.getBoundingClientRect();
     const from = 0.75 * vh;               // Kapitelstart: Oberkante bei 75 % Viewport
     const to = 0.45 * vh - r.height / 2;  // Kapitelende: Mitte bei 45 % Viewport
     const p = clamp01((from - r.top) / (from - to));
-    damage = Math.max(damage, THREE.MathUtils.lerp(i ? SICK_STEPS[i - 1] : 0, SICK_STEPS[i], p));
+    if (p > 0) damage = Math.max(damage, THREE.MathUtils.lerp(i ? SICK_STEPS[i - 1] : 0, SICK_STEPS[i], p));
   });
   let target = damage;
 
