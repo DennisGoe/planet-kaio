@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EIN PLANET — Klimaschutz zum Anfassen</title>
+  <meta name="description" content="Eine interaktive Reise um einen sehr kleinen Planeten — und vier Hebel, die wirklich zählen." />
+  <meta name="theme-color" content="#07090f" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%F0%9F%8C%8D%3C/text%3E%3C/svg%3E" />
+  <link href="https://api.fontshare.com/v2/css?f[]=clash-display@500,600,700&f[]=satoshi@400,500,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+
+  <!-- Loader -->
+  <div id="loader">
+    <div class="loader-count">0</div>
+    <div class="loader-label">Ein kleiner Planet wird geladen</div>
+  </div>
+
+  <!-- Overlays -->
+  <div class="noise" aria-hidden="true"></div>
+  <div class="progress" aria-hidden="true"></div>
+  <div id="cursor" aria-hidden="true"><span id="cursor-label">Drehen</span></div>
+
+  <!-- 3D -->
+  <canvas id="scene"></canvas>
+
+  <!-- Nav -->
+  <header class="nav">
+    <a class="nav-logo" href="#">PLANET&thinsp;1.5°</a>
+    <div class="nav-badge"><span class="dot"></span>Heute: 424 ppm CO₂</div>
+    <a class="nav-link" href="#handeln">Handeln ↓</a>
+  </header>
+
+  <main class="content">
+
+    <!-- Hero -->
+    <section class="hero" id="hero">
+      <h1 class="hero-title" id="hero-title"><span data-hero-split>EIN PLANET</span><span class="accent" id="hero-dot">.</span></h1>
+      <p class="hero-sub">Mehr haben wir nicht. Eine kleine Welt zum Anfassen —<br />und vier Hebel, die wirklich zählen.</p>
+      <div class="hero-hint"><span class="spin">⟲</span> Zieh am Planeten — keine Sorge, die Gravitation ist hier 10×</div>
+    </section>
+
+    <!-- Marquee -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <div class="marquee-group">
+          <span>Kein Planet B</span><span class="outline">✦</span>
+          <span class="outline">1,5° ist kein Ziel — es ist eine Grenze</span><span>✦</span>
+          <span>Handeln statt hoffen</span><span class="outline">✦</span>
+        </div>
+        <div class="marquee-group" aria-hidden="true">
+          <span>Kein Planet B</span><span class="outline">✦</span>
+          <span class="outline">1,5° ist kein Ziel — es ist eine Grenze</span><span>✦</span>
+          <span>Handeln statt hoffen</span><span class="outline">✦</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 01 — Die Lage -->
+    <section class="section stats" id="krise">
+      <div class="section-head" data-reveal>
+        <span class="section-label">01 — Die Lage</span>
+        <h2 data-split>DIE ERDE HAT FIEBER.</h2>
+        <p class="section-sub">Vier Zahlen — und du siehst dem Planeten dabei zu, was sie anrichten.</p>
+      </div>
+      <div class="stats-list">
+        <div class="stat" data-reveal>
+          <div class="stat-row"><span class="stat-value" data-target="1.5" data-decimals="1" data-prefix="+">+0,0</span><span class="stat-unit">°C</span></div>
+          <p>Erwärmung gegenüber vorindustriellem Niveau — 2024 wurde die Marke erstmals in einem ganzen Kalenderjahr überschritten.</p>
+          <span class="stat-note">↘ Auf dem Planeten: Das Gras vergilbt.</span>
+        </div>
+        <div class="stat" data-reveal>
+          <div class="stat-row"><span class="stat-value" data-target="424">0</span><span class="stat-unit">ppm</span></div>
+          <p>CO₂-Konzentration in der Atmosphäre — der höchste Wert seit über drei Millionen Jahren.</p>
+          <span class="stat-note">↘ Aus den Wolken wird Smog.</span>
+        </div>
+        <div class="stat" data-reveal>
+          <div class="stat-row"><span class="stat-value" data-target="4.4" data-decimals="1">0,0</span><span class="stat-unit">mm/Jahr</span></div>
+          <p>Meeresspiegelanstieg — etwa doppelt so schnell wie noch in den Neunzigern.</p>
+          <span class="stat-note">↘ Der Ozean kippt.</span>
+        </div>
+        <div class="stat" data-reveal>
+          <div class="stat-row"><span class="stat-value" data-target="12.2" data-decimals="1" data-prefix="−">−0,0</span><span class="stat-unit">%</span></div>
+          <p>Arktisches Sommereis pro Jahrzehnt — Tendenz: beschleunigt.</p>
+          <span class="stat-note">↘ Der letzte Schnee schmilzt.</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- 02 — Deine Hebel -->
+    <section class="section actions" id="handeln">
+      <div class="section-head" data-reveal>
+        <span class="section-label">02 — Deine Hebel</span>
+        <h2 data-split>VIER HEBEL MIT WIRKUNG.</h2>
+        <p class="section-sub">Der Schaden ist real — aber umkehrbar. Scroll weiter: Mit jedem Hebel erholt sich der Planet.</p>
+      </div>
+      <div class="cards">
+        <article class="card" data-reveal>
+          <span class="card-num">01</span>
+          <h3>Energie</h3>
+          <p>Wechsle zu echtem Ökostrom. Eine Unterschrift, fünf Minuten — und dein Zuhause läuft auf Sonne und Wind.</p>
+          <span class="card-tag">−1,5 t CO₂ / Jahr</span>
+        </article>
+        <article class="card" data-reveal>
+          <span class="card-num">02</span>
+          <h3>Mobilität</h3>
+          <p>Bahn statt Kurzstreckenflug, Rad statt Stadtauto. Die schnellste Strecke ist selten die klügste.</p>
+          <span class="card-tag">−2,0 t CO₂ / Jahr</span>
+        </article>
+        <article class="card" data-reveal>
+          <span class="card-num">03</span>
+          <h3>Ernährung</h3>
+          <p>Mehr Pflanzen, weniger Tier. Dein Teller ist drei Mal am Tag eine Abstimmung über die Zukunft.</p>
+          <span class="card-tag">−0,8 t CO₂ / Jahr</span>
+        </article>
+        <article class="card" data-reveal>
+          <span class="card-num">04</span>
+          <h3>Stimme</h3>
+          <p>Rede darüber. Wähle danach. Systemwandel schlägt Strohhalm — jedes Mal.</p>
+          <span class="card-tag">Wirkung: ∞</span>
+        </article>
+      </div>
+    </section>
+
+    <!-- 03 — Jetzt -->
+    <section class="section cta">
+      <span class="section-label" data-reveal>03 — Jetzt</span>
+      <h2 class="cta-title" data-split>FANG HEUTE AN.</h2>
+      <a class="btn-magnetic" href="https://www.un.org/actnow" target="_blank" rel="noopener" data-reveal>
+        <span>Mission starten ↗</span>
+      </a>
+    </section>
+
+    <footer class="footer">
+      <span>© 2026 — Gebaut für den einzigen Planeten, den wir haben.</span>
+      <span class="footer-egg">Inspiriert von einem sehr kleinen Planeten mit 10-facher Gravitation.</span>
+    </footer>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.7/dist/ScrollTrigger.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.18/dist/lenis.min.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

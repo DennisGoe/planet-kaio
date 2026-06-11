@@ -1,0 +1,516 @@
+/* ---------------------------------- */
+/*  PLANET 1.5° — Awwwards-Style CSS  */
+/* ---------------------------------- */
+
+:root {
+  --bg: #07090f;
+  --ink: #f4f1e8;
+  --muted: #8b93a7;
+  --accent: #9ef01a;
+  --line: rgba(244, 241, 232, 0.14);
+  --font-display: "Clash Display", system-ui, sans-serif;
+  --font-body: "Satoshi", system-ui, sans-serif;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+html { scrollbar-width: thin; scrollbar-color: #2a3142 transparent; }
+
+body {
+  background: radial-gradient(120% 90% at 50% 30%, #0d1524 0%, var(--bg) 62%) fixed;
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 16px;
+  line-height: 1.6;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection { background: var(--accent); color: #0a0f05; }
+::-webkit-scrollbar { width: 10px; }
+::-webkit-scrollbar-thumb { background: #2a3142; border-radius: 99px; }
+
+@media (hover: hover) {
+  body, a, button { cursor: none; }
+}
+
+a { color: inherit; text-decoration: none; }
+
+/* ---------- Canvas ---------- */
+
+#scene {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* ---------- Loader ---------- */
+
+#loader {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  pointer-events: none; /* der Planet ist schon während des Ladens greifbar */
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 5vh 5vw;
+}
+
+.loader-count {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(6rem, 22vw, 20rem);
+  line-height: 0.8;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.loader-label {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  color: var(--muted);
+  padding-bottom: 1.2em;
+}
+
+/* ---------- Overlays ---------- */
+
+.noise {
+  position: fixed;
+  inset: -100px;
+  z-index: 90;
+  pointer-events: none;
+  opacity: 0.055;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)'/%3E%3C/svg%3E");
+  animation: grain 7s steps(10) infinite;
+}
+
+@keyframes grain {
+  0%, 100% { transform: translate(0, 0); }
+  20% { transform: translate(-40px, 30px); }
+  40% { transform: translate(30px, -50px); }
+  60% { transform: translate(-50px, -20px); }
+  80% { transform: translate(40px, 40px); }
+}
+
+.progress {
+  position: fixed;
+  top: 0; left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--accent);
+  transform: scaleX(0);
+  transform-origin: left;
+  z-index: 95;
+}
+
+/* ---------- Cursor ---------- */
+
+#cursor {
+  position: fixed;
+  top: -7px; left: -7px;
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: var(--accent);
+  z-index: 200;
+  pointer-events: none;
+}
+
+#cursor-label {
+  position: absolute;
+  left: 24px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--accent);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.25s;
+}
+
+#cursor.is-planet #cursor-label { opacity: 1; }
+
+@media (hover: none) {
+  #cursor { display: none; }
+}
+
+/* ---------- Nav ---------- */
+
+.nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 22px 5vw;
+}
+
+.nav-logo {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 18px;
+  letter-spacing: 0.04em;
+}
+
+.nav-badge {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--muted);
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 8px 16px;
+  backdrop-filter: blur(8px);
+}
+
+.nav-badge .dot {
+  width: 7px; height: 7px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: pulse 2.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.35; transform: scale(0.7); }
+}
+
+.nav-link {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  border-bottom: 1px solid var(--accent);
+  padding-bottom: 3px;
+}
+
+@media (max-width: 640px) {
+  .nav-badge { display: none; }
+}
+
+/* ---------- Hero ---------- */
+
+.hero {
+  position: relative;
+  height: 100svh;
+  display: grid;
+  place-items: center;
+}
+
+.hero-title {
+  position: absolute;
+  z-index: 1; /* hinter dem Canvas (z-index 2) — der Planet schwebt vor der Headline */
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(3.6rem, 16.5vw, 17rem);
+  line-height: 0.85;
+  letter-spacing: -0.03em;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.hero-title .accent { color: var(--accent); display: inline-block; }
+
+.hero-sub {
+  position: absolute;
+  bottom: 13vh;
+  z-index: 3;
+  text-align: center;
+  color: var(--muted);
+  font-size: clamp(0.95rem, 1.4vw, 1.15rem);
+  max-width: 46ch;
+}
+
+.hero-hint {
+  position: absolute;
+  bottom: 26px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 3;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.22em;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.hero-hint .spin {
+  display: inline-block;
+  color: var(--accent);
+  animation: rotate 4s linear infinite;
+}
+
+@keyframes rotate { to { transform: rotate(-360deg); } }
+
+/* ---------- Marquee ---------- */
+
+.marquee {
+  position: relative;
+  z-index: 3;
+  overflow: hidden;
+  border-block: 1px solid var(--line);
+  padding: 26px 0;
+  background: rgba(7, 9, 15, 0.4);
+  backdrop-filter: blur(6px);
+}
+
+.marquee-track {
+  display: flex;
+  width: max-content;
+  animation: scroll-x 28s linear infinite;
+}
+
+.marquee-group {
+  display: flex;
+  align-items: center;
+  gap: 56px;
+  padding-right: 56px;
+}
+
+.marquee-group span {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.3rem, 3vw, 2.4rem);
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+}
+
+.marquee-group .outline {
+  color: transparent;
+  -webkit-text-stroke: 1px rgba(244, 241, 232, 0.75);
+}
+
+@keyframes scroll-x { to { transform: translateX(-50%); } }
+
+/* ---------- Sections ---------- */
+
+.section {
+  position: relative;
+  z-index: 3;
+  padding: 22vh 5vw;
+}
+
+.section-label {
+  display: block;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.28em;
+  color: var(--accent);
+  margin-bottom: 22px;
+}
+
+.section h2 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(2.4rem, 7vw, 6.5rem);
+  line-height: 0.95;
+  letter-spacing: -0.02em;
+  max-width: 14ch;
+}
+
+.section-head { margin-bottom: 10vh; }
+
+.section-sub {
+  margin-top: 18px;
+  color: var(--muted);
+  max-width: 48ch;
+}
+
+/* Stats — Planet wandert nach links, Inhalt sitzt rechts */
+
+.stats .section-head { margin-left: auto; width: min(620px, 100%); }
+.stats-list { margin-left: auto; width: min(620px, 100%); }
+
+/* Jede Zahl ist ein eigenes Kapitel — der Scrollraum gibt dem Planeten
+   Zeit, sich sichtbar zu verändern */
+.stat {
+  border-top: 1px solid var(--line);
+  padding: 34px 0;
+  min-height: 52vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(3.2rem, 7.5vw, 6.8rem);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+}
+
+.stat-unit {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: clamp(1.1rem, 2vw, 1.6rem);
+  color: var(--muted);
+}
+
+.stat p {
+  margin-top: 10px;
+  color: var(--muted);
+  max-width: 52ch;
+}
+
+.stat-note {
+  display: block;
+  margin-top: 16px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: var(--accent);
+}
+
+@media (max-width: 900px) {
+  .stats .section-head, .stats-list { width: 100%; }
+}
+
+/* Cards */
+
+/* Karten links, der (heilende) Planet bleibt rechts daneben sichtbar */
+.cards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+  width: min(720px, 54%);
+}
+
+.card {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  padding: 30px 26px 26px;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  background: rgba(13, 18, 30, 0.5);
+  backdrop-filter: blur(10px);
+  transition: border-color 0.35s, background 0.35s;
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.card:hover {
+  border-color: var(--accent);
+  background: rgba(17, 24, 38, 0.65);
+}
+
+.card-num {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--muted);
+  letter-spacing: 0.2em;
+}
+
+.card h3 {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: clamp(1.5rem, 2.4vw, 2.1rem);
+  margin: 14px 0 12px;
+}
+
+.card p {
+  color: var(--muted);
+  font-size: 0.95rem;
+  flex: 1;
+}
+
+.card-tag {
+  margin-top: 22px;
+  align-self: flex-start;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #0a0f05;
+  background: var(--accent);
+  border-radius: 99px;
+  padding: 7px 14px;
+}
+
+@media (max-width: 900px) { .cards { width: 100%; } }
+@media (max-width: 620px)  { .cards { grid-template-columns: 1fr; } .card { min-height: 0; } }
+
+/* CTA */
+
+.cta {
+  min-height: 90svh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 30px;
+}
+
+.cta-title {
+  font-size: clamp(3rem, 11vw, 11rem) !important;
+  max-width: none !important;
+  white-space: nowrap;
+}
+
+.btn-magnetic {
+  display: grid;
+  place-items: center;
+  width: 168px;
+  height: 168px;
+  border: 1px solid var(--accent);
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  color: var(--accent);
+  transition: background 0.35s, color 0.35s;
+  will-change: transform;
+}
+
+.btn-magnetic:hover {
+  background: var(--accent);
+  color: #0a0f05;
+}
+
+/* Footer */
+
+.footer {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 30px 5vw 36px;
+  border-top: 1px solid var(--line);
+  font-size: 12px;
+  color: var(--muted);
+  letter-spacing: 0.04em;
+}
+
+.footer-egg { opacity: 0.6; }
+
+/* ---------- Split-Text-Helfer ---------- */
+
+.word { display: inline-flex; overflow: hidden; }
+.char { display: inline-block; will-change: transform; }
