@@ -8,9 +8,9 @@ Dragon Ball Z.
 
 Beim Scrollen erzählen die Klima-Daten eine Geschichte: Jede Zahl macht den
 Planeten sichtbar kranker — das Gras vergilbt, aus Wolken wird Smog, der Ozean
-kippt, der letzte Schnee schmilzt. Einmal angerichteter Schaden bleibt
-(Ratschen-Logik): Zurückscrollen heilt nichts. Nur die vier Hebel und die CTA
-machen den Planeten wieder gesund.
+kippt, der letzte Schnee schmilzt. Erst die vier Hebel und die CTA ganz unten
+machen den Planeten wieder vollständig gesund. Der Bogen ist direkt an die
+Scroll-Position gekoppelt und läuft in beide Richtungen.
 
 ## Features
 

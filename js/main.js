@@ -578,12 +578,11 @@ document.querySelectorAll('a, button, .card').forEach((el) => {
 
 /* ---------- Krankheits-Zustand: deterministisch aus der Scroll-Position ----------
    Eine einzige Quelle der Wahrheit statt konkurrierender Scrub-Tweens — kein
-   Flackern, kein Zurückspringen. Dazu eine Ratsche: Einmal erreichter Schaden
-   bleibt bestehen. Zurückscrollen heilt nichts — nur die Hebel-Section und die
-   CTA senken den Schaden (und damit auch die Ratsche) wieder. */
+   Flackern, kein Zurückspringen. Der Bogen ist rein positionsgebunden:
+   oben gesund → mit jeder Klima-Zahl kränker → die Hebel und die CTA ganz
+   unten heilen ihn wieder vollständig. Gilt in beide Scroll-Richtungen. */
 
 const sick = { v: 0 };  // 0 = gesund, 1 = toter Planet
-let worstReached = 0;   // Ratsche: schlimmster bisher erreichter Zustand
 let appliedSick = -1;
 
 const SICK_STEPS = [0.3, 0.55, 0.8, 1];
@@ -604,21 +603,17 @@ function computeSickTarget() {
     const p = clamp01((from - r.top) / (from - to));
     damage = Math.max(damage, THREE.MathUtils.lerp(i ? SICK_STEPS[i - 1] : 0, SICK_STEPS[i], p));
   });
-  worstReached = Math.max(worstReached, damage);
-  let target = worstReached;
+  let target = damage;
 
   // Heilung Stufe 1: die Hebel-Karten bringen ihn auf 0.35 zurück …
   const ra = actionsEl.getBoundingClientRect();
   const pActions = clamp01((0.6 * vh - ra.top) / (ra.height - 0.15 * vh));
   target = THREE.MathUtils.lerp(target, 0.35, pActions);
 
-  // … Heilung Stufe 2: die CTA macht ihn ganz gesund — und senkt die Ratsche
+  // … Heilung Stufe 2: die CTA ganz unten macht ihn wieder ganz gesund
   const rc = ctaEl.getBoundingClientRect();
   const pCta = clamp01((0.8 * vh - rc.top) / (0.25 * vh + rc.height / 2));
-  target = THREE.MathUtils.lerp(target, 0, pCta);
-
-  worstReached = Math.min(worstReached, target);
-  return target;
+  return THREE.MathUtils.lerp(target, 0, pCta);
 }
 
 const ATMO_HEALTHY = new THREE.Color(0x6fb8ff), ATMO_SICK = new THREE.Color(0xb0622a);
@@ -794,7 +789,7 @@ gsap.timeline({
 
 /* Hinweis: Krankheits-Zustand und Akzentfarbe werden NICHT über ScrollTrigger
    getweent, sondern pro Frame deterministisch aus der Scroll-Position berechnet
-   (computeSickTarget im Render-Loop) — eine Quelle, kein Flackern, mit Ratsche. */
+   (computeSickTarget im Render-Loop) — eine Quelle, kein Flackern. */
 
 /* ---------- Scroll-Progress ---------- */
 
