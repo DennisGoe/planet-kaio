@@ -60,8 +60,8 @@ const mat = (color, roughness = 0.85) => new THREE.MeshStandardMaterial({ color,
 /* ---------- "Krankheits"-System: Materialien morphen zwischen gesund und tot ---------- */
 
 const sickMats = [];
-const registerSick = (material, sickHex) => {
-  sickMats.push({ m: material, from: material.color.clone(), to: new THREE.Color(sickHex) });
+const registerSick = (material, sickHex, channel = 'heat') => {
+  sickMats.push({ m: material, from: material.color.clone(), to: new THREE.Color(sickHex), ch: channel });
   return material;
 };
 const droopLeaves = [];   // Palmblätter, die beim Erkranken herabhängen
@@ -161,13 +161,22 @@ const PAL_HEALTHY = {
   snow: new THREE.Color(0xe9eef3)
 };
 
-// Der kranke Planet: vertrocknetes Gras, toter Wald, geschmolzener Schnee
-const PAL_SICK = {
-  deep: new THREE.Color(0x3a352a), sand: new THREE.Color(0x9a8a72),
+// Kapitel 1 — Erwärmung: NUR die Vegetation vertrocknet. Wasser, Fels und
+// Schnee bleiben hier unverändert — Meere und Eis haben eigene Kapitel.
+const PAL_HEAT = {
+  deep: new THREE.Color(0x27543f), sand: new THREE.Color(0xbfa472),
   grass1: new THREE.Color(0xa8854a), grass2: new THREE.Color(0x7a5c33),
-  forest: new THREE.Color(0x4a3c2a), rock: new THREE.Color(0x5f564a),
-  snow: new THREE.Color(0x6e6354)
+  forest: new THREE.Color(0x4a3c2a), rock: new THREE.Color(0x857a64),
+  snow: new THREE.Color(0xe9eef3)
 };
+
+const C_TUNDRA = new THREE.Color(0x77684f); // Boden unter dem geschmolzenen Schnee
+
+// Wo liegt (gesunder) Schnee? — exakt dieselbe Logik wie in terrainColor
+function snowMaskAt(dir, r) {
+  const h = r - SEA_R;
+  return (h >= 0.13 || (Math.abs(dir.y) > 0.86 && h > 0.01)) ? 1 : 0;
+}
 
 function terrainColor(dir, r, out, P) {
   const h = r - SEA_R;
@@ -188,7 +197,9 @@ const terrainGeo = new THREE.SphereGeometry(1, 220, 150);
 {
   const p = terrainGeo.attributes.position;
   const colors = new Float32Array(p.count * 3);
-  const colorsSick = new Float32Array(p.count * 3);
+  const colorsHeat = new Float32Array(p.count * 3);
+  const colorsMelt = new Float32Array(p.count * 3);
+  const snowMaskArr = new Float32Array(p.count);
   const dir = new THREE.Vector3();
   const c = new THREE.Color();
   for (let i = 0; i < p.count; i++) {
@@ -196,27 +207,32 @@ const terrainGeo = new THREE.SphereGeometry(1, 220, 150);
     const r = terrainRadius(dir);
     p.setXYZ(i, dir.x * r, dir.y * r, dir.z * r);
     terrainColor(dir, r, c, PAL_HEALTHY);
-    colors[i * 3] = c.r;
-    colors[i * 3 + 1] = c.g;
-    colors[i * 3 + 2] = c.b;
-    terrainColor(dir, r, c, PAL_SICK);
-    colorsSick[i * 3] = c.r;
-    colorsSick[i * 3 + 1] = c.g;
-    colorsSick[i * 3 + 2] = c.b;
+    colors.set([c.r, c.g, c.b], i * 3);
+    terrainColor(dir, r, c, PAL_HEAT);
+    colorsHeat.set([c.r, c.g, c.b], i * 3);
+    const n = vnoise(dir.x * 9 + 5, dir.y * 9 + 5, dir.z * 9 + 5);
+    c.copy(C_TUNDRA).multiplyScalar(0.9 + n * 0.18);
+    colorsMelt.set([c.r, c.g, c.b], i * 3);
+    snowMaskArr[i] = snowMaskAt(dir, r);
   }
   terrainGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3));
-  terrainGeo.setAttribute('colorSick', new THREE.BufferAttribute(colorsSick, 3));
+  terrainGeo.setAttribute('colorHeat', new THREE.BufferAttribute(colorsHeat, 3));
+  terrainGeo.setAttribute('colorMelt', new THREE.BufferAttribute(colorsMelt, 3));
+  terrainGeo.setAttribute('snowMask', new THREE.BufferAttribute(snowMaskArr, 1));
   terrainGeo.computeVertexNormals();
 }
 
-// Der Krankheitsgrad blendet im Vertex-Shader zwischen beiden gebakten Farbsätzen
-const uSick = { value: 0 };
+// Zwei unabhängige Shader-Kanäle: uHeat lässt die Vegetation vertrocknen,
+// uIce schmilzt den Schnee (über die gebakte Maske) zu Tundra-Boden
+const uHeat = { value: 0 };
+const uIce = { value: 0 };
 const terrainMat = new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.95, metalness: 0 });
 terrainMat.onBeforeCompile = (shader) => {
-  shader.uniforms.uSick = uSick;
+  shader.uniforms.uHeat = uHeat;
+  shader.uniforms.uIce = uIce;
   shader.vertexShader = shader.vertexShader
-    .replace('#include <common>', '#include <common>\nattribute vec3 colorSick;\nuniform float uSick;')
-    .replace('#include <color_vertex>', '#include <color_vertex>\n\tvColor = mix( vColor, colorSick, uSick );');
+    .replace('#include <common>', '#include <common>\nattribute vec3 colorHeat;\nattribute vec3 colorMelt;\nattribute float snowMask;\nuniform float uHeat;\nuniform float uIce;')
+    .replace('#include <color_vertex>', '#include <color_vertex>\n\tvColor = mix( vColor, colorHeat, uHeat );\n\tvColor = mix( vColor, colorMelt, uIce * snowMask );');
 };
 
 const terrain = shaded(new THREE.Mesh(terrainGeo, terrainMat));
@@ -226,6 +242,65 @@ const oceanMat = new THREE.MeshStandardMaterial({ color: 0x1e6f9f, roughness: 0.
 const ocean = new THREE.Mesh(new THREE.SphereGeometry(SEA_R, 96, 64), oceanMat);
 ocean.receiveShadow = true;
 planetGroup.add(ocean);
+
+/* ---------- Polkappen (schmelzen in Kapitel 4) ----------
+   Eis-Kappen über beiden Polen, leicht über Ozean und Flachland. Hohe
+   (schneeweiße) Gipfel dürfen durchstechen. Beim Schmelzen ziehen sich die
+   Kappen per Geometrie-Morph zum Pol zusammen und verblassen am Ende. */
+
+const R_ICE = 2.06;
+const iceMat = new THREE.MeshStandardMaterial({ color: 0xeaf4ff, roughness: 0.35, metalness: 0, transparent: true });
+const iceCaps = [];
+
+function buildIceCap(north) {
+  const thetaStart = north ? 0 : Math.PI - 0.52;
+  const geo = new THREE.SphereGeometry(1, 48, 10, 0, Math.PI * 2, thetaStart, 0.52);
+  const pos = geo.attributes.position;
+  const data = [];
+  const v = new THREE.Vector3();
+  for (let i = 0; i < pos.count; i++) {
+    v.fromBufferAttribute(pos, i).normalize();
+    data.push({
+      theta: Math.acos(THREE.MathUtils.clamp(v.y, -1, 1)),
+      azim: Math.atan2(v.z, v.x),
+      edge: vnoise(v.x * 6 + 9, v.y * 6 + 9, v.z * 6 + 9) * 0.025 // unregelmäßiger Eisrand
+    });
+  }
+  const cap = new THREE.Mesh(geo, iceMat);
+  cap.receiveShadow = true;
+  cap.userData = { north, data };
+  planetGroup.add(cap);
+  iceCaps.push(cap);
+}
+buildIceCap(true);
+buildIceCap(false);
+
+function updateIceCaps(melt) {
+  const visible = melt < 0.995;
+  iceMat.opacity = melt > 0.8 ? 1 - (melt - 0.8) / 0.2 : 1;
+  for (const cap of iceCaps) {
+    cap.visible = visible;
+    if (!visible) continue;
+    const { north, data } = cap.userData;
+    const pos = cap.geometry.attributes.position;
+    const shrink = 1 - melt * 0.97;
+    for (let i = 0; i < pos.count; i++) {
+      const d = data[i];
+      const theta = north ? d.theta * shrink : Math.PI - (Math.PI - d.theta) * shrink;
+      const baseTheta = north ? d.theta : Math.PI - d.theta;
+      // die äußerste Vertex-Reihe biegt als Eiskante hinunter zum Wasser
+      const r = baseTheta > 0.5 ? SEA_R + 0.004 : R_ICE + d.edge;
+      pos.setXYZ(i,
+        r * Math.sin(theta) * Math.cos(d.azim),
+        r * Math.cos(theta),
+        r * Math.sin(theta) * Math.sin(d.azim)
+      );
+    }
+    pos.needsUpdate = true;
+    cap.geometry.computeVertexNormals();
+  }
+}
+updateIceCaps(0);
 
 // Ein paar Felsbrocken im Gelände
 const rockMat = mat(0x8a8174, 1);
@@ -414,7 +489,8 @@ planetGroup.add(carPivot);
 
 const cloudMat = registerSick(
   new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 1, transparent: true, opacity: 0.92 }),
-  0x5e5a52 // aus Wolken wird Smog
+  0x5e5a52, // aus Wolken wird Smog …
+  'air'     // … aber erst im Atmosphären-Kapitel
 );
 
 function buildCloud() {
@@ -576,47 +652,43 @@ document.querySelectorAll('a, button, .card').forEach((el) => {
   el.addEventListener('mouseleave', () => gsap.to(cursorEl, { scale: 1, duration: 0.3 }));
 });
 
-/* ---------- Krankheits-Zustand: deterministisch aus der Scroll-Position ----------
-   Eine einzige Quelle der Wahrheit statt konkurrierender Scrub-Tweens — kein
-   Flackern, kein Zurückspringen. Der Bogen ist rein positionsgebunden:
-   oben gesund → mit jeder Klima-Zahl kränker → die Hebel und die CTA ganz
-   unten heilen ihn wieder vollständig. Gilt in beide Scroll-Richtungen. */
+/* ---------- Vier Schadens-Kanäle, je einer pro Daten-Kapitel ----------
+   Jede Klima-Zahl löst GENAU die Veränderung aus, von der sie erzählt —
+   und zwar dann, wenn ihr Inhalt auf Scrollhöhe ist:
+     heat — +1,5 °C : Vegetation vertrocknet, Licht wird hart
+     air  — 424 ppm : Atmosphäre kippt, Wolken werden Smog
+     sea  — 4,4 mm  : die Meere kippen
+     ice  — −12,2 % : die Polkappen schmelzen, der Meeresspiegel steigt
+   Alles deterministisch aus der Scroll-Position, geglättet — kein Flackern. */
 
-const sick = { v: 0 };  // 0 = gesund, 1 = toter Planet
-let appliedSick = -1;
+const channels = { heat: 0, air: 0, sea: 0, ice: 0 };
+const applied = { heat: -1, air: -1, sea: -1, ice: -1 };
+const CHANNEL_KEYS = ['heat', 'air', 'sea', 'ice'];
 
-const SICK_STEPS = [0.3, 0.55, 0.8, 1];
 const statEls = gsap.utils.toArray('.stat');
 const actionsEl = document.querySelector('.actions');
 const ctaEl = document.querySelector('.cta');
 const clamp01 = (x) => THREE.MathUtils.clamp(x, 0, 1);
 
-function computeSickTarget() {
+function computeChannelTargets() {
   const vh = window.innerHeight;
 
-  // Kapitel: jede Klima-Zahl schiebt den Schaden eine Stufe weiter.
-  // Ein Kapitel zählt erst, wenn es wirklich erreicht ist (p > 0) — sein
-  // Ruhewert ist die Vorgänger-Stufe, und die würde den Planeten sonst
-  // schon am Seitenanfang krank machen.
-  let damage = 0;
-  statEls.forEach((el, i) => {
+  // Kapitel-Fortschritt: 0 → 1, während der jeweilige Inhalt auf Scrollhöhe ist
+  const ps = statEls.map((el) => {
     const r = el.getBoundingClientRect();
     const from = 0.75 * vh;               // Kapitelstart: Oberkante bei 75 % Viewport
     const to = 0.45 * vh - r.height / 2;  // Kapitelende: Mitte bei 45 % Viewport
-    const p = clamp01((from - r.top) / (from - to));
-    if (p > 0) damage = Math.max(damage, THREE.MathUtils.lerp(i ? SICK_STEPS[i - 1] : 0, SICK_STEPS[i], p));
+    return clamp01((from - r.top) / (from - to));
   });
-  let target = damage;
 
-  // Heilung Stufe 1: die Hebel-Karten bringen ihn auf 0.35 zurück …
+  // Heilung wirkt auf alle Kanäle: die Hebel lindern, die CTA heilt vollständig
   const ra = actionsEl.getBoundingClientRect();
   const pActions = clamp01((0.6 * vh - ra.top) / (ra.height - 0.15 * vh));
-  target = THREE.MathUtils.lerp(target, 0.35, pActions);
-
-  // … Heilung Stufe 2: die CTA ganz unten macht ihn wieder ganz gesund
   const rc = ctaEl.getBoundingClientRect();
   const pCta = clamp01((0.8 * vh - rc.top) / (0.25 * vh + rc.height / 2));
-  return THREE.MathUtils.lerp(target, 0, pCta);
+  const heal = (1 - 0.65 * pActions) * (1 - pCta);
+
+  return { heat: ps[0] * heal, air: ps[1] * heal, sea: ps[2] * heal, ice: ps[3] * heal };
 }
 
 const ATMO_HEALTHY = new THREE.Color(0x6fb8ff), ATMO_SICK = new THREE.Color(0xb0622a);
@@ -626,22 +698,37 @@ const OCEAN_HEALTHY = oceanMat.color.clone(), OCEAN_SICK = new THREE.Color(0x465
 const ACCENT_HEALTHY = new THREE.Color('#9ef01a'), ACCENT_SICK = new THREE.Color('#ff5e3a');
 const accentCol = new THREE.Color();
 
-function applySickness(h) {
-  // Die Akzentfarbe der Seite hängt direkt am Zustand des Planeten —
-  // eine Quelle, immer synchron, auch die Ratsche gilt für die UI
-  accentCol.lerpColors(ACCENT_HEALTHY, ACCENT_SICK, h);
-  document.documentElement.style.setProperty('--accent', '#' + accentCol.getHexString());
+function applyState() {
+  const { heat, air, sea, ice } = channels;
 
-  uSick.value = h;
-  for (const { m, from, to } of sickMats) m.color.lerpColors(from, to, h);
-  oceanMat.color.lerpColors(OCEAN_HEALTHY, OCEAN_SICK, h);
-  oceanMat.roughness = THREE.MathUtils.lerp(0.16, 0.5, h);
-  atmosphere.material.uniforms.glowColor.value.lerpColors(ATMO_HEALTHY, ATMO_SICK, h);
-  keyLight.color.lerpColors(KEY_HEALTHY, KEY_SICK, h);
-  hemiLight.groundColor.lerpColors(GROUND_HEALTHY, GROUND_SICK, h);
-  for (const d of droopLeaves) d.leaf.rotation.z = THREE.MathUtils.lerp(d.baseZ, d.baseZ - 0.55, h);
-  const crownScale = THREE.MathUtils.lerp(1, 0.72, h);
+  // Material-Registry: jedes Material hört auf seinen Kanal
+  for (const { m, from, to, ch } of sickMats) m.color.lerpColors(from, to, channels[ch]);
+
+  // Kapitel 1 — Erwärmung: Vegetation vertrocknet, das Licht wird hart
+  uHeat.value = heat;
+  keyLight.color.lerpColors(KEY_HEALTHY, KEY_SICK, heat);
+  hemiLight.groundColor.lerpColors(GROUND_HEALTHY, GROUND_SICK, heat);
+  for (const d of droopLeaves) d.leaf.rotation.z = THREE.MathUtils.lerp(d.baseZ, d.baseZ - 0.55, heat);
+  const crownScale = THREE.MathUtils.lerp(1, 0.72, heat);
   for (const crown of shrinkCrowns) crown.scale.setScalar(crownScale);
+
+  // Kapitel 2 — Atmosphäre: der Glow kippt (Wolken→Smog läuft über die Registry)
+  atmosphere.material.uniforms.glowColor.value.lerpColors(ATMO_HEALTHY, ATMO_SICK, air);
+
+  // Kapitel 3 — die Meere kippen: trüb, matt, undurchsichtig
+  oceanMat.color.lerpColors(OCEAN_HEALTHY, OCEAN_SICK, sea);
+  oceanMat.roughness = THREE.MathUtils.lerp(0.16, 0.5, sea);
+  oceanMat.opacity = THREE.MathUtils.lerp(0.92, 0.985, sea);
+
+  // Kapitel 4 — Polkappen und Bergschnee schmelzen, der Meeresspiegel steigt
+  uIce.value = ice;
+  updateIceCaps(ice);
+  ocean.scale.setScalar(1 + 0.012 * ice);
+
+  // Der Gesamtzustand färbt die UI
+  const overall = (heat + air + sea + ice) / 4;
+  accentCol.lerpColors(ACCENT_HEALTHY, ACCENT_SICK, overall);
+  document.documentElement.style.setProperty('--accent', '#' + accentCol.getHexString());
 }
 
 /* ---------- Render-Loop ---------- */
@@ -662,10 +749,15 @@ renderer.setAnimationLoop(() => {
     spinBoost *= 1 - 1.4 * dt;
   }
 
-  sick.v += (computeSickTarget() - sick.v) * Math.min(1, dt * 4);
-  if (Math.abs(sick.v - appliedSick) > 0.001) {
-    applySickness(sick.v);
-    appliedSick = sick.v;
+  const targets = computeChannelTargets();
+  let stateDirty = false;
+  for (const k of CHANNEL_KEYS) {
+    channels[k] += (targets[k] - channels[k]) * Math.min(1, dt * 4);
+    if (Math.abs(channels[k] - applied[k]) > 0.001) stateDirty = true;
+  }
+  if (stateDirty) {
+    applyState();
+    for (const k of CHANNEL_KEYS) applied[k] = channels[k];
   }
 
   carPivot.rotation.y -= dt * 0.45;
@@ -790,9 +882,9 @@ gsap.timeline({
   .to(rig.rotation, { z: 0 }, 0)
   .to(rig.scale, { x: 1, y: 1, z: 1 }, 0);
 
-/* Hinweis: Krankheits-Zustand und Akzentfarbe werden NICHT über ScrollTrigger
-   getweent, sondern pro Frame deterministisch aus der Scroll-Position berechnet
-   (computeSickTarget im Render-Loop) — eine Quelle, kein Flackern. */
+/* Hinweis: Die vier Schadens-Kanäle und die Akzentfarbe werden NICHT über
+   ScrollTrigger getweent, sondern pro Frame deterministisch aus der Scroll-
+   Position berechnet (computeChannelTargets im Render-Loop) — kein Flackern. */
 
 /* ---------- Scroll-Progress ---------- */
 

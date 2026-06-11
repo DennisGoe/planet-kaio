@@ -6,11 +6,18 @@ Dragon Ball Z.
 
 ## Die Geschichte
 
-Beim Scrollen erzählen die Klima-Daten eine Geschichte: Jede Zahl macht den
-Planeten sichtbar kranker — das Gras vergilbt, aus Wolken wird Smog, der Ozean
-kippt, der letzte Schnee schmilzt. Erst die vier Hebel und die CTA ganz unten
-machen den Planeten wieder vollständig gesund. Der Bogen ist direkt an die
-Scroll-Position gekoppelt und läuft in beide Richtungen.
+Beim Scrollen erzählen die Klima-Daten eine Geschichte — und jede Zahl löst
+genau die Veränderung aus, von der sie erzählt, sobald ihr Inhalt auf
+Scrollhöhe ist:
+
+1. **+1,5 °C** — die Vegetation vertrocknet, das Licht wird hart
+2. **424 ppm CO₂** — die Atmosphäre kippt, aus Wolken wird Smog
+3. **4,4 mm/Jahr** — die Meere kippen: trüb, matt, leblos
+4. **−12,2 % Eis** — die Polkappen schmelzen sichtbar ab, der Meeresspiegel steigt
+
+Erst die vier Hebel und die CTA ganz unten machen den Planeten wieder
+vollständig gesund. Der Bogen ist direkt an die Scroll-Position gekoppelt
+und läuft in beide Richtungen.
 
 ## Features
 
